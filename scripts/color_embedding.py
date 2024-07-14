@@ -79,12 +79,12 @@ def compute_regions_colors(images: torch.Tensor, faces: dict) -> tuple:
     _masks = masks.unsqueeze(2)    # batch x region x color x height x width
     _images = _images.unsqueeze(1)  # batch x region x color x height x width
     masked_images = (_images * _masks)
-    rgb_colors = masked_images.mean(axis=-1).mean(axis=-1).detach().numpy() / 255  # batch x region x color
+    rgb_colors = masked_images.mean(axis=-1).mean(axis=-1).cpu().detach().numpy() / 255  # batch x region x color
     hsv_colors = rgb_to_hsv(rgb_colors) 
     labels = faces["seg"]["label_names"]
     data = hsv_colors.reshape(-1, len(labels) * 3)  # batch x region*color
     columns = list(chain(*[[f"{label}-{c}" for c in ["h", "s", "v"]] for label in labels]))
-    np_image_ids = faces["image_ids"].detach().numpy()
+    np_image_ids = faces["image_ids"].cpu().detach().numpy()
     return np_image_ids, columns, data
 
 
