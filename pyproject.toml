@@ -1,0 +1,21 @@
+[tool.poetry]
+name = "season-color-analysis"
+version = "0.1.0"
+description = ""
+authors = ["Giacomo Bubba <giacobub@gmail.com>"]
+license = "GPL-3.0"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+
+
+[tool.poetry.group.dev.dependencies]
+beautifulsoup4 = "^4.12.3"
+requests = "^2.32.3"
+tqdm = "^4.66.4"
+click = "^8.1.7"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
