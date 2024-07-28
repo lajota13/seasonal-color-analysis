@@ -1,4 +1,3 @@
-import os
 from collections import defaultdict
 
 from PIL import Image
@@ -8,8 +7,8 @@ from tqdm import tqdm
 import torch
 from torchvision.datasets import ImageFolder
 from torchvision.transforms import Resize
-from torchvision.transforms.functional import pil_to_tensor
-from facenet_pytorch import MTCNN, InceptionResnetV1
+
+from seasonal_color_analysis.core.face_embedding import FaceEmbedder
 
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
@@ -46,31 +45,6 @@ class FacesDataset(torch.utils.data.Dataset):
         paths, labels, imgs = tuple(zip(*batch))
         return paths, labels, imgs
 
-
-class FaceEmbedder:
-    def __init__(self, embedder: str):
-        self._mtcnn = MTCNN()
-        self._resnet = InceptionResnetV1(pretrained=embedder).to(DEVICE).eval()
-
-    def __call__(self, images: list[Image]) -> torch.Tensor:
-        crops = {i: self._mtcnn(img) for i, img in enumerate(images)}
-        # filtering images with no detected faces
-        crops = {i: crop for i, crop in crops.items() if isinstance(crop, torch.Tensor)}
-        crops = {i: crop for i, crop in crops.items() if crop.dim() == 3}
-        # stacking crops
-        pt_crops = torch.stack(list(crops.values())).to(DEVICE)
-
-        # computing embeddings
-        pt_embeddings = self._resnet(pt_crops)
-        # indexing embeddings
-        embdeddings = {idx: pt_embeddings[i, ...] for i, idx in enumerate(crops.keys())}
-        n = pt_embeddings.shape[-1]
-        # inserting tensor of nan for the images with no detected faces
-        embdeddings_all = [embdeddings[i] if i in embdeddings else torch.ones((n)) * torch.nan for i, _ in enumerate(images)]
-        pt_embeddings_all = torch.stack(embdeddings_all)
-        return pt_embeddings_all
-
-
 if __name__ == "__main__":
     @click.command()
     @click.option("--root", help="The source image dataset location", required=True)
@@ -96,7 +70,7 @@ if __name__ == "__main__":
         loader = torch.utils.data.DataLoader(dataset, collate_fn=FacesDataset.collate_fn, batch_size=batch_size)
 
         # instantiation of the face embedder
-        face_embedder = FaceEmbedder(embedder)
+        face_embedder = FaceEmbedder(embedder, device=DEVICE)
 
         # instantiate empty DataFrame
         df = pd.DataFrame()
