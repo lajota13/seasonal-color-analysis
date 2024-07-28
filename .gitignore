@@ -1,3 +1,4 @@
 *.ipynb_checkpoints
 .venv
 notebooks/logs
+__pycache__
