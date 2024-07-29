@@ -1,5 +1,9 @@
+from PIL import Image
+
 import torch
 import numpy as np
+
+from seasonal_color_analysis.core.face_embedding import FaceEmbedder
 
 
 class CosineClassifier(torch.nn.Module):
@@ -37,9 +41,8 @@ class SeasonEmbedder(torch.nn.Module):
     return w * (1 + self._delta / torch.norm(w, dim=-1, keepdim=True))
 
 
-
 class SeasonClassifier(torch.nn.Module):
-  def __init__(self, n_classes: int):
+  def __init__(self, n_classes: int = 4):
     super().__init__()
     self._season_embedder = SeasonEmbedder()
     self._classifier = CosineClassifier(n_classes)
@@ -56,3 +59,26 @@ class SeasonClassifier(torch.nn.Module):
 
   def forward(self, x: torch.Tensor) -> torch.Tensor:
     return self._classifier(self._season_embedder(x))
+  
+
+class ImageSeasonClassifier:
+  def __init__(self, face_embedder: FaceEmbedder, season_classifier: SeasonClassifier):
+    self._face_embedder = face_embedder
+    self._season_classifier = season_classifier
+
+  def predict(self, imgs: list[Image]) -> tuple[np.ndarray, np.ndarray]:
+    x = self._face_embedder(imgs)
+    season_embeddings = self._season_classifier.embedding(x).detach().numpy()
+    proba = self._season_classifier.logits(season_embeddings).softmax(dim=1).detach().numpy()
+    return season_embeddings, proba
+
+  @classmethod
+  def load(cls, season_classifier_path: str, face_embedder: str):
+    face_embedder = FaceEmbedder(embedder=face_embedder)
+    season_classifier = SeasonClassifier()
+    season_classifier.load_state_dict(torch.load(season_classifier_path))
+    season_classifier.eval()
+    return cls(face_embedder, season_classifier)
+
+  
+
