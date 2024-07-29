@@ -16,7 +16,7 @@ class FaceEmbedder:
         crops = {i: crop for i, crop in crops.items() if isinstance(crop, torch.Tensor)}
         crops = {i: crop for i, crop in crops.items() if crop.dim() == 3}
         # stacking crops
-        pt_crops = torch.stack(list(crops.values())).to(self.device)
+        pt_crops = torch.stack(list(crops.values())).to(self._device)
 
         # computing embeddings
         pt_embeddings = self._resnet(pt_crops)
