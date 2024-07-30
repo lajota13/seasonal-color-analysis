@@ -60,6 +60,7 @@ if __name__ == "__main__":
                            img_width: int,
                            img_height: int, 
                            batch_size: int):
+        print("Using device:", DEVICE)
         # instantiation of the dataset
         dataset = dataset = FacesDataset(
             root, 
