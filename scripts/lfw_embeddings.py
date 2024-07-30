@@ -54,13 +54,15 @@ if __name__ == "__main__":
     @click.option("--img_width", type=int, help="Width which to resize images to", default=225, show_default=True)
     @click.option("--img_height", type=int, help="Height which to resize images to", default=225, show_default=True)
     @click.option("--batch_size", help="Size of the batches which the embedder model is fed with", type=int, default=128, show_default=True)
+    @click.option("--device", help="Which device (cpu, cuda, etc...) to use", default=DEVICE, show_default=True)
     def compute_embeddings(root: str, 
                            dst_path: str, 
                            embedder: str,
                            img_width: int,
                            img_height: int, 
-                           batch_size: int):
-        print("Using device:", DEVICE)
+                           batch_size: int, 
+                           device: str):
+        print("Using device:", device)
         # instantiation of the dataset
         dataset = dataset = FacesDataset(
             root, 
