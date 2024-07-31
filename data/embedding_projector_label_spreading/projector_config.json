@@ -1,0 +1,13 @@
+{
+    "embeddings": [
+      {
+        "tensorName": "Facenet embeddings",
+        "tensorShape": [
+          13233,
+          512
+        ],
+        "tensorPath": "https://huggingface.co/datasets/lajota13/lfw_facenet_embeddings/resolve/main/embedding_projector_tensors.tsv",
+        "metadataPath": "https://huggingface.co/datasets/lajota13/lfw_facenet_embeddings/resolve/main/embedding_projector_metadata.tsv"
+      }
+    ]
+  }
