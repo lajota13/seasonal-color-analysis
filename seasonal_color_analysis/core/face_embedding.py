@@ -9,7 +9,7 @@ def select_largest_box(boxes: np.ndarray | None) -> np.ndarray | None:
     if boxes is not None:
         areas = (boxes[:, 2] - boxes[:, 0]) * (boxes[:, 3] - boxes[:, 1])
         box_order = np.argsort(areas)[::-1]
-        return box_order[box_order][0]
+        return boxes[box_order][0]
 
 class FaceEmbedder:
     def __init__(self, embedder: str, device: str = "cpu"):
@@ -26,7 +26,7 @@ class FaceEmbedder:
         faces = [extract_face(img, box) if box is not None else None for img, box in zip(images, batch_boxes)]  # one crop per image
         
         # filtering images with no detected faces
-        crops = {i: crop for i, crop in faces if crop is not None}
+        crops = {i: crop for i, crop in enumerate(faces) if crop is not None}
         # stacking crops
         pt_crops = torch.stack(list(crops.values())).to(self._device)
 
