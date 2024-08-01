@@ -2,3 +2,4 @@
 .venv
 notebooks/logs
 __pycache__
+.env
