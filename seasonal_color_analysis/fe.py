@@ -1,3 +1,4 @@
+import os
 from io import BytesIO
 from PIL import Image, ImageDraw
 
@@ -12,24 +13,28 @@ from seasonal_color_analysis.core.classification import ImageSeasonClassifier
 
 # config
 FACE_EMBEDDER = "vggface2"
-CLASSIFIER_PATH = "data/classifier_weights_v1.pt"
-SEASON_EMBEDDINGS_PATH = "data/lfw_season_embeddings_train.parquet"
-SEASON_DESCRIPTION = {
-    "winter": "w",
-    "summer": "s",
-    "spring": "s",
-    "autumn": "a"
-}
-FOREGROUND_IMAGE_PATH = "data/embedding_projector_label_spreading/embeddings.png"
+CLASSIFIER_PATH = os.path.join("data", "classifier_weights_v1.pt")
+SEASON_EMBEDDINGS_PATH = os.path.join("data", "lfw_season_embeddings_train.parquet")
+SEASON_DESCRIPTION_PATH = os.path.join("data", "seasons_descriptions")
+FOREGROUND_IMAGE_PATH = os.path.join("data", "embedding_projector_label_spreading/embeddings.png")
 
 CLASSIFIER = ImageSeasonClassifier.load(CLASSIFIER_PATH, FACE_EMBEDDER)
 
 
+#@st.cache_data
+def get_season_description(season: str) -> tuple[str, str]:
+    p = os.path.join(SEASON_DESCRIPTION_PATH, season + ".md")
+    with open(p) as fid:
+        s = fid.read()
+    summary, detail = s.split("\n\n", 1)
+    return summary, detail
+
+
 @st.cache_data
-def predict(img_bytes: bytes) -> tuple[np.ndarray | None, dict[str, float] | None, np.ndarray | None]:
+def predict(img_bytes: bytes) -> tuple[np.ndarray | None, dict[str, float], np.ndarray, np.ndarray]:
     with Image.open(BytesIO(img_bytes)) as img:
-        batch_boxes, proba_dicts, np_season_embeddings = CLASSIFIER.predict([img.convert("RGB")])
-        return batch_boxes[0], proba_dicts[0], np_season_embeddings[0]
+        batch_boxes, proba_dicts, np_season_embeddings, np_facenet_embeddings = CLASSIFIER.predict([img.convert("RGB")])
+        return batch_boxes[0], proba_dicts[0], np_season_embeddings[0], np_facenet_embeddings[0]
 
 
 @st.cache_data
@@ -125,7 +130,7 @@ img_stream = st.file_uploader(
 
 if img_stream is not None:
     img_bytes = img_stream.getvalue()
-    bbox, proba_dict, np_season_embedding = predict(img_bytes)
+    bbox, proba_dict, np_season_embedding, np_facenet_embedding = predict(img_bytes)
     if bbox is None:
         col1, col2 = st.columns(2)
         with col1:
@@ -156,12 +161,20 @@ if img_stream is not None:
         st.plotly_chart(fig2, use_container_width=True)
         
         # describe the most likely season
-        st.header(most_likely_season)
-        st.write(f"You are most likely a **{most_likely_season}**, with a probability of {int(100 * most_likely_prob)} %!")
-        st.write(SEASON_DESCRIPTION[most_likely_season])
+        most_likely_summary, most_likely_detail = get_season_description(most_likely_season)
+        with st.expander(
+            f"You are most likely a **{most_likely_season.capitalize()}**," 
+            f"with a probability of {int(100 * most_likely_prob)} %!"
+            f"\n\n{most_likely_summary}"
+        ):
+            st.markdown(most_likely_detail)
         
         # describe the second most likely season
         if most_likely_prob < 0.9:
-            st.header(second_most_likely_season)
-            st.write(f"However, you could be a **{second_most_likely_season}** as well (probability of {int(100 * second_most_likely_prob)} %)")
-            st.write(SEASON_DESCRIPTION[second_most_likely_season])
+            second_most_likely_summary, second_most_likely_detail = get_season_description(second_most_likely_season)
+            with st.expander(
+                f"However you could be a **{most_likely_season.capitalize()}** too," 
+                f"with a probability of {int(100 * most_likely_prob)} %."
+                f"\n\n{second_most_likely_summary}"
+            ):
+                st.markdown(second_most_likely_detail)
