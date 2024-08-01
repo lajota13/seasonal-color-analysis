@@ -23,17 +23,19 @@ RUN $POETRY_HOME/bin/pip install poetry==1.8.3
 
 ENV PATH $PATH:$POETRY_HOME/bin
 
+COPY pyproject.toml poetry.lock /app/ 
 WORKDIR /app
 
-COPY poetry.toml poetry.lock . 
-
 # creating the poetry virtual environment
-RUN poetry lock --no-update
-RUN poetry install --no-root
+RUN poetry install --without dev --no-root
 
 ENV PATH="/app/.venv/bin:$PATH"
+ENV PYTHONPATH="."
 
 COPY . .
+
+# download pretrained models
+RUN python -c "from seasonal_color_analysis.core.face_embedding import FaceEmbedder; FaceEmbedder('vggface2')"
 
 EXPOSE $PORT
 
