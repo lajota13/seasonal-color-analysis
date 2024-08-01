@@ -13,6 +13,7 @@ from seasonal_color_analysis.core.classification import ImageSeasonClassifier
 # config
 FACE_EMBEDDER = "vggface2"
 CLASSIFIER_PATH = "data/classifier_weights_v1.pt"
+SEASON_EMBEDDINGS_PATH = "data/lfw_season_embeddings_train.parquet"
 SEASON_DESCRIPTION = {
     "winter": "w",
     "summer": "s",
@@ -56,7 +57,31 @@ def draw_barplot(probs: dict):
 
 @st.cache_data
 def draw_embedding(np_season_embedding: np.ndarray):
-    pass
+    df = pd.read_parquet(SEASON_EMBEDDINGS_PATH)[
+        ["name", "macroseason", "x", "y"]
+    ].rename(columns={"macroseason": "season"})
+    df["size"] = 1e-2
+    df.loc[len(df), :] = ["You", most_likely_season, np_season_embedding[0], np_season_embedding[1], 1e-1]
+    fig = px.scatter(
+        df, 
+        x="x", 
+        y="y", 
+        color="season", 
+        size="size",
+        hover_name='name',
+        hover_data={"size": False},
+        color_discrete_sequence=px.colors.qualitative.Light24
+    )
+    fig.add_annotation(
+        x=np_season_embedding[0],
+        y=np_season_embedding[1],
+        text="You",
+        showarrow=True,
+        xanchor="right",
+        font=dict(size=50)
+    )
+    fig.update_layout(xaxis_visible=False, yaxis_visible=False)
+    return fig
 
 
 # App title
@@ -66,16 +91,18 @@ st.set_page_config(
 )
 
 with st.sidebar:
-    st.title(":orange[Mango]App 0.1.0")
+    st.title(":orange[Mango]App 0.1.0β")
     #st.image(SIDEBAR_IMAGE)
     st.caption(
         """
         Ever wondered which colors suit you the best? 
         
-        Seasonal color analysis associates different color palettes to the four seasons of the year, 
-        claiming everyone can be assigned to one of the seasons, and so to specific colors.
-        
-        Try **MangoApp** and discover your season with the help of AI!
+        In its simplest form, seasonal color analysis associates different color palettes to the four seasons of the year, 
+        claiming everyone can be assigned to one of them, and so to specific colors.
+
+        A detailed and professional analysis generally requires a skilled specialist, 
+        but if you are down to have just some fun and get some hints on your season, 
+        try **MangoApp**: the AI-powered tool for seasonal color analysis!
         """
     )
 
@@ -104,33 +131,34 @@ if img_stream is not None:
         with col2:
             st.write("⚠️\n\nIt was not possibile to detect any face in your image, try uploading another one\n\n⚠️")
     else:
+        seasons = list(proba_dict.keys())
+        probs = list(proba_dict.values())
+        most_likely_season = seasons[np.argsort(probs)[-1]]
+        most_likely_prob = np.sort(probs)[-1]
+        second_most_likely_season = seasons[np.argsort(probs)[-2]]
+        second_most_likely_prob = np.sort(probs)[-2]
         col1, col2 = st.columns(2)
         with col1:
             st.image(img_bytes, caption="Your image")
         with col2:
             img_w_bbox = draw_bbox(img_bytes, bbox)
             st.image(np.array(img_w_bbox), caption="Detected face")
+        
         st.header("Your result")
-        col3, col4 = st.columns(2)
-        with col3:
-            with st.container(border=True):
-                fig1 = draw_barplot(proba_dict)
-                st.plotly_chart(fig1, use_container_width=True)
-        #with col4:
-        #    with st.container(border=True):
-        #        fig2 = draw_embedding(np_season_embedding)
-        #        st.plotly_chart(fig2, use_container_width=True)
-        seasons = list(proba_dict.keys())
-        probs = list(proba_dict.values())
+
+        st.caption("Season probability")
+        fig1 = draw_barplot(proba_dict)
+        st.plotly_chart(fig1, use_container_width=True)
+        st.caption("Where you are in the seasonal-color space")
+        fig2 = draw_embedding(np_season_embedding)
+        st.plotly_chart(fig2, use_container_width=True)
+        
         # describe the most likely season
-        most_likely_season = seasons[np.argsort(probs)[-1]]
-        most_likely_prob = np.sort(probs)[-1]
         st.header(most_likely_season)
         st.write(f"You are most likely a **{most_likely_season}**, with a probability of {int(100 * most_likely_prob)} %!")
         st.write(SEASON_DESCRIPTION[most_likely_season])
+        
         # describe the second most likely season
-        second_most_likely_season = seasons[np.argsort(probs)[-2]]
-        second_most_likely_prob = np.sort(probs)[-2]
         if most_likely_prob < 0.9:
             st.header(second_most_likely_season)
             st.write(f"However, you could be a **{second_most_likely_season}** as well (probability of {int(100 * second_most_likely_prob)} %)")
