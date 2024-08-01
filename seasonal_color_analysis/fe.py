@@ -160,10 +160,11 @@ if img_stream is not None:
         fig2 = draw_embedding(np_season_embedding)
         st.plotly_chart(fig2, use_container_width=True)
         
+        st.header("Analysis")
         # describe the most likely season
         most_likely_summary, most_likely_detail = get_season_description(most_likely_season)
         with st.expander(
-            f"You are most likely a **{most_likely_season.capitalize()}**," 
+            f"You are most likely a **{most_likely_season.capitalize()}**, " 
             f"with a probability of {int(100 * most_likely_prob)} %!"
             f"\n\n{most_likely_summary}"
         ):
@@ -173,8 +174,8 @@ if img_stream is not None:
         if most_likely_prob < 0.9:
             second_most_likely_summary, second_most_likely_detail = get_season_description(second_most_likely_season)
             with st.expander(
-                f"However you could be a **{most_likely_season.capitalize()}** too," 
-                f"with a probability of {int(100 * most_likely_prob)} %."
+                f"However you could be a **{second_most_likely_season.capitalize()}** too, " 
+                f"with a probability of {int(100 * second_most_likely_prob)} %."
                 f"\n\n{second_most_likely_summary}"
             ):
                 st.markdown(second_most_likely_detail)
