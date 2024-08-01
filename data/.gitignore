@@ -1,7 +1,0 @@
-lfw-deepfunneled*
-lfw_facenet_embeddings.parquet
-lfw_facenet_embeddings_label_spreading.parquet
-embedding_projector_label_spreading/embeddings.tsv
-embedding_projector_label_spreading/metadata.tsv
-lfw_season_embeddings_*.parquet
-feedback
