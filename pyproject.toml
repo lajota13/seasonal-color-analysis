@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "season-color-analysis"
-version = "0.1.0"
+version = "0.1.0beta"
 description = ""
 authors = ["Giacomo Bubba <giacobub@gmail.com>"]
 license = "GPL-3.0"
@@ -10,6 +10,11 @@ readme = "README.md"
 python = "^3.10"
 streamlit = "^1.37.0"
 plotly = "^5.23.0"
+facenet-pytorch = "^2.6.0"
+timm = "^1.0.7"
+pandas = "^2.2.2"
+pyarrow = "^16.1.0"
+fastparquet = "^2024.5.0"
 
 
 [tool.poetry.group.dev.dependencies]
@@ -18,15 +23,10 @@ requests = "^2.32.3"
 tqdm = "^4.66.4"
 click = "^8.1.7"
 pyfacer = "^0.0.4"
-pandas = "^2.2.2"
-timm = "^1.0.7"
-pyarrow = "^16.1.0"
-fastparquet = "^2024.5.0"
 seaborn = "^0.13.2"
 matplotlib = "^3.9.1"
 notebook = "^7.2.1"
 scikit-learn = "^1.5.1"
-facenet-pytorch = "^2.6.0"
 
 [build-system]
 requires = ["poetry-core"]
