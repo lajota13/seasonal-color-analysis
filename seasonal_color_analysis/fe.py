@@ -20,6 +20,7 @@ SEASON_DESCRIPTION = {
     "spring": "s",
     "autumn": "a"
 }
+FOREGROUND_IMAGE_PATH = "data/embedding_projector_label_spreading/embeddings.png"
 
 CLASSIFIER = ImageSeasonClassifier.load(CLASSIFIER_PATH, FACE_EMBEDDER)
 
@@ -110,6 +111,7 @@ with st.sidebar:
     st.markdown('[![Repo](https://badgen.net/badge/icon/GitHub?icon=github&label)](https://github.com/lajota13/seasonal-color-analysis)')
 
 st.title("Seasonal color analysis with :orange[Mango]App")
+st.image(FOREGROUND_IMAGE_PATH)
 
 img_stream = st.file_uploader(
     "Upload a selfie", 
