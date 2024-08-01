@@ -20,24 +20,32 @@ if 'session_uuid' not in st.session_state:
 # config
 FACE_EMBEDDER = "vggface2"
 CLASSIFIER_PATH = os.path.join("data", "classifier_weights_v1.pt")
-CLASSIFIER_VERSION = CLASSIFIER_PATH.split("_")[-1].replace("pt", "")
+CLASSIFIER_VERSION = CLASSIFIER_PATH.split("_")[-1].replace(".pt", "")
 SEASON_EMBEDDINGS_PATH = os.path.join("data", "lfw_season_embeddings_train.parquet")
 SEASON_DESCRIPTION_PATH = os.path.join("data", "seasons_descriptions")
 FOREGROUND_IMAGE_PATH = os.path.join("data", "embedding_projector_label_spreading/embeddings.png")
-FEEDBACK_PATH = os.path.join("data", "feedback", f"{uuid.uuid4()}.jsonl")  # local path where to dump feedback
-FEEDBACK_HF_DATASET = os.environ["HF_FEEDBACK_DATASET"]  # HuggingFace dataset id where to upload feedback 
+FEEDBACK_DIRECTORY = os.path.join("data", "feedback")  # local path where to dump feedback
+FEEDBACK_HF_DATASET = os.environ["FEEDBACK_HF_DATASET"]  # HuggingFace dataset id where to upload feedback 
+FEEDBACK_HF_DIRECTORY = os.environ["FEEDBACK_HF_DIRECTORY"]  # Directory in the HuggingFace dataset where to upload feedback
 FEEDBACK_UPLOAD_PERIOD = os.getenv("FEEDBACK_UPLOAD_PERIOD", 1)  # period between uploads to HuggingFace in minutes
+SEASONS_DISPLAY_NAMES = {
+    "winter": ":blue[***Winter***]❄️",
+    "autumn": ":orange[***Autumn***]🍂",
+    "spring": ":green[***Spring***]🌺",
+    "summer": ":red[***Summer***]☀️"
+}
 
-
-CLASSIFIER = ImageSeasonClassifier.load(CLASSIFIER_PATH, FACE_EMBEDDER)
+if "classifier" not in st.session_state:
+    st.session_state["classifier"] = ImageSeasonClassifier.load(CLASSIFIER_PATH, FACE_EMBEDDER)
 # Schedule regular uploads. Remote repo and local folder are created if they don't already exist.
-SCHEDULER = CommitScheduler(
-    repo_id=FEEDBACK_HF_DATASET,
-    repo_type="dataset",
-    folder_path=os.path.split(FEEDBACK_PATH)[0],
-    path_in_repo="data",
-    every=int(FEEDBACK_UPLOAD_PERIOD),
-)
+if "scheduler" not in st.session_state:
+    st.session_state["scheduler"] = CommitScheduler(
+        repo_id=FEEDBACK_HF_DATASET,
+        repo_type="dataset",
+        folder_path=FEEDBACK_DIRECTORY,
+        path_in_repo=FEEDBACK_HF_DIRECTORY,
+        every=int(FEEDBACK_UPLOAD_PERIOD),
+    )
 
 
 @st.cache_data
@@ -52,7 +60,7 @@ def get_season_description(season: str) -> tuple[str, str]:
 @st.cache_data
 def predict(img_bytes: bytes) -> tuple[np.ndarray | None, dict[str, float], np.ndarray, np.ndarray]:
     with Image.open(BytesIO(img_bytes)) as img:
-        batch_boxes, proba_dicts, np_season_embeddings, np_facenet_embeddings = CLASSIFIER.predict([img.convert("RGB")])
+        batch_boxes, proba_dicts, np_season_embeddings, np_facenet_embeddings = st.session_state["classifier"].predict([img.convert("RGB")])
         return batch_boxes[0], proba_dicts[0], np_season_embeddings[0], np_facenet_embeddings[0]
 
 
@@ -123,10 +131,9 @@ def dump_feedback(
             "classifier_version": CLASSIFIER_VERSION,
             "timestamp": datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S.%f")
     }
-    with SCHEDULER.lock:
-        with open(FEEDBACK_PATH, "a") as fid:
-            fid.write(json.dumps(d))
-            fid.write("\n")
+    feedback_path = os.path.join(FEEDBACK_DIRECTORY, f"{uuid.uuid4()}.json")
+    with open(feedback_path, "w") as fid:
+        json.dump(d, fid)
         
 
 
@@ -204,7 +211,7 @@ if img_stream is not None:
         # describe the most likely season
         most_likely_summary, most_likely_detail = get_season_description(most_likely_season)
         with st.expander(
-            f"You are most likely a **{most_likely_season.capitalize()}**, " 
+            f"You are most likely a {SEASONS_DISPLAY_NAMES[most_likely_season]}, " 
             f"with a probability of {int(100 * most_likely_prob)} %!"
             f"\n\n{most_likely_summary}"
         ):
@@ -214,22 +221,24 @@ if img_stream is not None:
         if most_likely_prob < 0.9:
             second_most_likely_summary, second_most_likely_detail = get_season_description(second_most_likely_season)
             with st.expander(
-                f"However you could be a **{second_most_likely_season.capitalize()}** too, " 
+                f"However you could be a {SEASONS_DISPLAY_NAMES[second_most_likely_season]} too, " 
                 f"with a probability of {int(100 * second_most_likely_prob)} %."
                 f"\n\n{second_most_likely_summary}"
             ):
                 st.markdown(second_most_likely_detail)
         
         st.header("Your feedback")
+        choices = [SEASONS_DISPLAY_NAMES[most_likely_season], SEASONS_DISPLAY_NAMES[second_most_likely_season]]
         feedback = st.radio(
             "**MangoApp** is still in a initial stage. "
             "Your feedback is anonymous but is crucial to improve color analysis accuracy! "
             f"Do you resonate more with the description of the **{most_likely_season.capitalize()}** type or **{second_most_likely_season.capitalize()}**?",
-            [most_likely_season.capitalize(), second_most_likely_season.capitalize()],
+            choices,
         )
         if st.button("Send feedback"):
             if feedback is not None:
-                dump_feedback(np_facenet_embedding, most_likely_season, second_most_likely_season, feedback)
+                _feedback = [most_likely_season, second_most_likely_season][choices.index(feedback)]
+                dump_feedback(np_facenet_embedding, most_likely_season, second_most_likely_season, _feedback)
                 st.write("Thank you for your feedback ❤️ You are contributing to the development of **:orange[Mango]App**🥭!")
             else:
                 st.write("Please select one of the two options.")
