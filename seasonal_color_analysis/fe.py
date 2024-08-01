@@ -1,27 +1,46 @@
 import os
 from io import BytesIO
 from PIL import Image, ImageDraw
+import uuid
+import json
+import datetime
 
 import streamlit as st
 import numpy as np
 import plotly.express as px
-import plotly.graph_objects as go
 import pandas as pd
+from huggingface_hub import CommitScheduler
 
 from seasonal_color_analysis.core.classification import ImageSeasonClassifier
+
+if 'session_uuid' not in st.session_state:
+    st.session_state["session_uuid"] = str(uuid.uuid4())
 
 
 # config
 FACE_EMBEDDER = "vggface2"
 CLASSIFIER_PATH = os.path.join("data", "classifier_weights_v1.pt")
+CLASSIFIER_VERSION = CLASSIFIER_PATH.split("_")[-1].replace("pt", "")
 SEASON_EMBEDDINGS_PATH = os.path.join("data", "lfw_season_embeddings_train.parquet")
 SEASON_DESCRIPTION_PATH = os.path.join("data", "seasons_descriptions")
 FOREGROUND_IMAGE_PATH = os.path.join("data", "embedding_projector_label_spreading/embeddings.png")
+FEEDBACK_PATH = os.path.join("data", "feedback", f"{uuid.uuid4()}.jsonl")  # local path where to dump feedback
+FEEDBACK_HF_DATASET = os.environ["HF_FEEDBACK_DATASET"]  # HuggingFace dataset id where to upload feedback 
+FEEDBACK_UPLOAD_PERIOD = os.getenv("FEEDBACK_UPLOAD_PERIOD", 1)  # period between uploads to HuggingFace in minutes
+
 
 CLASSIFIER = ImageSeasonClassifier.load(CLASSIFIER_PATH, FACE_EMBEDDER)
+# Schedule regular uploads. Remote repo and local folder are created if they don't already exist.
+SCHEDULER = CommitScheduler(
+    repo_id=FEEDBACK_HF_DATASET,
+    repo_type="dataset",
+    folder_path=os.path.split(FEEDBACK_PATH)[0],
+    path_in_repo="data",
+    every=int(FEEDBACK_UPLOAD_PERIOD),
+)
 
 
-#@st.cache_data
+@st.cache_data
 def get_season_description(season: str) -> tuple[str, str]:
     p = os.path.join(SEASON_DESCRIPTION_PATH, season + ".md")
     with open(p) as fid:
@@ -88,6 +107,27 @@ def draw_embedding(np_season_embedding: np.ndarray):
     )
     fig.update_layout(xaxis_visible=False, yaxis_visible=False)
     return fig
+
+
+def dump_feedback(
+    np_facenet_embedding: np.ndarray, 
+    most_likely_season: str, 
+    second_most_likely_season: str, 
+    feedback: str):
+    d = {
+            "session_uuid": st.session_state["session_uuid"],
+            "facenet_embedding": np_facenet_embedding.tolist(),
+            "most_likely_season": most_likely_season,
+            "second_most_likely_season": second_most_likely_season,
+            "feedback": feedback,
+            "classifier_version": CLASSIFIER_VERSION,
+            "timestamp": datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S.%f")
+    }
+    with SCHEDULER.lock:
+        with open(FEEDBACK_PATH, "a") as fid:
+            fid.write(json.dumps(d))
+            fid.write("\n")
+        
 
 
 # App title
@@ -179,3 +219,17 @@ if img_stream is not None:
                 f"\n\n{second_most_likely_summary}"
             ):
                 st.markdown(second_most_likely_detail)
+        
+        st.header("Your feedback")
+        feedback = st.radio(
+            "**MangoApp** is still in a initial stage. "
+            "Your feedback is anonymous but is crucial to improve color analysis accuracy! "
+            f"Do you resonate more with the description of the **{most_likely_season.capitalize()}** type or **{second_most_likely_season.capitalize()}**?",
+            [most_likely_season.capitalize(), second_most_likely_season.capitalize()],
+        )
+        if st.button("Send feedback"):
+            if feedback is not None:
+                dump_feedback(np_facenet_embedding, most_likely_season, second_most_likely_season, feedback)
+                st.write("Thank you for your feedback ❤️ You are contributing to the development of **:orange[Mango]App**🥭!")
+            else:
+                st.write("Please select one of the two options.")
