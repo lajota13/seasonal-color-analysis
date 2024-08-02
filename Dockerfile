@@ -1,6 +1,5 @@
 FROM python:3.10-slim
 LABEL python_version=python3.10
-ARG PORT=7860
 
 RUN apt-get update && apt-get install -y \
     build-essential \
@@ -12,8 +11,8 @@ RUN apt-get update && apt-get install -y \
 
 # Poetry virtual environment setup
 ENV POETRY_NO_INTERACTION=1
-ENV POETRY_HOME /opt/env
-ENV POETRY_CACHE_DIR /opt/.cache
+ENV POETRY_HOME=/opt/env
+ENV POETRY_CACHE_DIR=/opt/.cache
 # mandatory !!
 ENV POETRY_VIRTUALENVS_IN_PROJECT=1
 
@@ -21,7 +20,7 @@ RUN python3 -m venv $POETRY_HOME
 RUN $POETRY_HOME/bin/pip install -U pip setuptools
 RUN $POETRY_HOME/bin/pip install poetry==1.8.3
 
-ENV PATH $PATH:$POETRY_HOME/bin
+ENV PATH=$PATH:$POETRY_HOME/bin
 
 COPY pyproject.toml poetry.lock /app/ 
 WORKDIR /app
@@ -37,8 +36,8 @@ COPY . .
 # download pretrained models
 RUN python -c "from seasonal_color_analysis.core.face_embedding import FaceEmbedder; FaceEmbedder('vggface2')"
 
-EXPOSE $PORT
-
 HEALTHCHECK CMD curl --fail http://localhost:$PORT/_stcore/health
+
+SHELL ["/bin/bash", "-c"]
 
 ENTRYPOINT streamlit run seasonal_color_analysis/fe.py --server.port=$PORT --server.address=0.0.0.0
