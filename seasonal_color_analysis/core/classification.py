@@ -68,7 +68,7 @@ class ImageSeasonClassifier:
     self._face_embedder = face_embedder
     self._season_classifier = season_classifier
 
-  def predict(self, imgs: list[Image]) -> tuple[list[np.ndarray], list[dict[str, float]], np.ndarray]:
+  def predict(self, imgs: list[Image]) -> tuple[list[np.ndarray], list[dict[str, float]], np.ndarray, np.ndarray]:
     with torch.no_grad():
       batch_boxes, facenet_embeddings = self._face_embedder.compute(imgs)
       season_embeddings = self._season_classifier.embedding(facenet_embeddings)
@@ -76,7 +76,7 @@ class ImageSeasonClassifier:
       np_season_embeddings = season_embeddings.detach().numpy() 
       np_proba = proba.detach().numpy()
       proba_dicts = [{s: p for s, p in zip(self.seasons, probs)} for probs in np_proba]
-      return batch_boxes, proba_dicts, np_season_embeddings
+      return batch_boxes, proba_dicts, np_season_embeddings, facenet_embeddings.detach().numpy()
 
   @classmethod
   def load(cls, season_classifier_path: str, embedder_type: str):
