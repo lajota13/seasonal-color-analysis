@@ -4,6 +4,7 @@ LABEL python_version=python3.10
 RUN apt-get update && apt-get install -y \
     build-essential \
     curl \
+    wget \
     software-properties-common \
     git \
     && rm -rf /var/lib/apt/lists/*
@@ -37,6 +38,7 @@ COPY . .
 RUN wget https://huggingface.co/datasets/lajota13/lfw_facenet_embeddings/resolve/main/lfw_season_embeddings_train.parquet -O data/lfw_season_embeddings_train.parquet
 
 # download vggface2 weights for Facenet embeddings
+RUN mkdir -p ~/.cache/torch/checkpoints
 RUN wget https://github.com/timesler/facenet-pytorch/releases/download/v2.2.9/20180402-114759-vggface2.pt -O ~/.cache/torch/checkpoints/20180402-114759-vggface2.pt
 
 HEALTHCHECK CMD curl --fail http://localhost:$PORT/_stcore/health
