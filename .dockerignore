@@ -10,3 +10,6 @@ data/lfw_facenet_embeddings_label_spreading.parquet
 data/embedding_projector_label_spreading/embeddings.tsv
 data/embedding_projector_label_spreading/metadata.tsv
 data/feedback
+data/lfw-colors.parquet
+data/lfw_season_embeddings_*.parquet
+data/classifier_weights_v1.pt

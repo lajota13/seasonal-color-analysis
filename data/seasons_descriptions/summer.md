@@ -40,4 +40,5 @@ The **Summer** type is characterized by cool and muted colors. Individuals with 
 + The **Summer** palette embodies a soft, elegant, and refined aesthetic.
 + Think of the gentle and serene colors of a summer twilight or a misty morning by the sea.
 
+
 By adhering to these guidelines, individuals with a **Summer** color type can enhance their natural beauty and achieve a harmonious, balanced look.
