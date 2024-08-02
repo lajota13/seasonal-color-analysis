@@ -15,6 +15,7 @@ timm = "^1.0.7"
 pandas = "^2.2.2"
 pyarrow = "^16.1.0"
 fastparquet = "^2024.5.0"
+torch = {version = "2.2.2", source = "pytorch_cpu"}
 
 
 [tool.poetry.group.dev.dependencies]
@@ -27,6 +28,12 @@ seaborn = "^0.13.2"
 matplotlib = "^3.9.1"
 notebook = "^7.2.1"
 scikit-learn = "^1.5.1"
+
+
+[[tool.poetry.source]]
+name = "pytorch_cpu"
+url = "https://download.pytorch.org/whl/cpu"
+priority = "explicit"
 
 [build-system]
 requires = ["poetry-core"]
