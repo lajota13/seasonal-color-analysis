@@ -16,6 +16,7 @@ pandas = "^2.2.2"
 pyarrow = "^16.1.0"
 fastparquet = "^2024.5.0"
 torch = {version = "2.2.2", source = "pytorch_cpu"}
+torchvision = {version = "0.17.2", source = "pytorch_cpu"}
 
 
 [tool.poetry.group.dev.dependencies]
