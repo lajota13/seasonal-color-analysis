@@ -33,8 +33,11 @@ ENV PYTHONPATH="."
 
 COPY . .
 
-# download pretrained models
-RUN python -c "from seasonal_color_analysis.core.face_embedding import FaceEmbedder; FaceEmbedder('vggface2')"
+# download needed data from Hugging Face
+RUN wget https://huggingface.co/datasets/lajota13/lfw_facenet_embeddings/resolve/main/lfw_season_embeddings_train.parquet -O data/lfw_season_embeddings_train.parquet
+
+# download vggface2 weights for Facenet embeddings
+RUN wget https://github.com/timesler/facenet-pytorch/releases/download/v2.2.9/20180402-114759-vggface2.pt -O ~/.cache/torch/checkpoints/20180402-114759-vggface2.pt
 
 HEALTHCHECK CMD curl --fail http://localhost:$PORT/_stcore/health
 
